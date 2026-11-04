@@ -83,7 +83,7 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
     <script>
-        // Senin gerçek şifrelerin... Umarım o veritabanını test modunda açmışsındır 💀
+        // O canımız ciğerimiz şifrelerimiz (Sakın buralara dokunma!)
         const firebaseConfig = {
             apiKey: "AIzaSyBlxF9qsGsJXlfGcnnzQw3TV8BTPSINyGA",
             authDomain: "dert-duvari-9462d.firebaseapp.com",
@@ -94,16 +94,30 @@
             appId: "1:1096717129709:web:3abae1c278a46a85e939e4"
         };
 
+        let kullaniciAdi = "Anonim Biri"; // Eğer isim girmezlerse bu kalacak
+
         try {
             // Sistemi başlatıyoruz
             firebase.initializeApp(firebaseConfig);
             const db = firebase.database();
             
+            // Site açıldığında isim sormak için küçük bir gecikme ekliyoruz
+            setTimeout(() => {
+                let girilenIsim = prompt("Dert duvarına hangi isimle yazacaksın brom?", "");
+                if (girilenIsim && girilenIsim.trim() !== "") {
+                    kullaniciAdi = girilenIsim.trim();
+                }
+            }, 300);
+
             // Mesajları dinle ve ekrana bas
             db.ref("mesajlar").on("child_added", function(snapshot) {
                 let data = snapshot.val();
+                
+                // Eskiden atılan mesajlarda isim verisi yoksa çökelmesin diye kontrol
+                let gonderen = data.isim ? data.isim : "Anonim Biri";
+
                 let chatBox = document.getElementById("chat-box");
-                chatBox.innerHTML += `<div class='message'><span class='meta'>Anonim Biri:</span><br>${data.text}</div>`;
+                chatBox.innerHTML += `<div class='message'><span class='meta'>${gonderen}:</span><br>${data.text}</div>`;
                 chatBox.scrollTop = chatBox.scrollHeight;
             });
         } catch(e) {
@@ -117,7 +131,11 @@
             if(text.trim() === "") return;
             
             try {
-                firebase.database().ref("mesajlar").push({ text: text });
+                // Artık sadece mesajı değil, yazanın ismini de veritabanına atıyoruz
+                firebase.database().ref("mesajlar").push({ 
+                    isim: kullaniciAdi,
+                    text: text 
+                });
             } catch(e) {
                 alert("Hayaller Paris, gerçekler veritabanı bağlantı hatası...");
             }
