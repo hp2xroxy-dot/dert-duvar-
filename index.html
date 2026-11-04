@@ -32,6 +32,7 @@
             margin-bottom: 15px; 
             border-bottom: 1px solid #333; 
             padding-bottom: 8px; 
+            word-wrap: break-word;
         }
         .meta { 
             font-size: 0.8em; 
@@ -77,41 +78,37 @@
         <button onclick="sendMessage()">Gönder</button>
     </div>
 
-    <!-- Firebase V8 (Eski usül, tek dosyada en temizi bu maalesef) -->
+    <!-- Firebase V8 -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
     <script>
-        // BROM BURAYA KENDİ FİREBASE BİLGİLERİNİ GİRMEN LAZIM, YOKSA ÇALIŞMAZ 💀
-        // Firebase'den proje açınca sana aynen bu formatta bir kod verecekler.
+        // Senin gerçek şifrelerin... Umarım o veritabanını test modunda açmışsındır 💀
         const firebaseConfig = {
-            apiKey: "BURAYI_DOLDURACAKSIN",
-            authDomain: "BURAYI_DOLDURACAKSIN",
-            databaseURL: "BURAYI_DOLDURACAKSIN",
-            projectId: "BURAYI_DOLDURACAKSIN",
-            storageBucket: "BURAYI_DOLDURACAKSIN",
-            messagingSenderId: "BURAYI_DOLDURACAKSIN",
-            appId: "BURAYI_DOLDURACAKSIN"
+            apiKey: "AIzaSyBlxF9qsGsJXlfGcnnzQw3TV8BTPSINyGA",
+            authDomain: "dert-duvari-9462d.firebaseapp.com",
+            databaseURL: "https://dert-duvari-9462d-default-rtdb.firebaseio.com", 
+            projectId: "dert-duvari-9462d",
+            storageBucket: "dert-duvari-9462d.firebasestorage.app",
+            messagingSenderId: "1096717129709",
+            appId: "1:1096717129709:web:3abae1c278a46a85e939e4"
         };
 
-        // Eğer config boşsa sayfa çökmesin diye ufak bir önlem 🤡
         try {
-            if (firebaseConfig.apiKey !== "BURAYI_DOLDURACAKSIN") {
-                firebase.initializeApp(firebaseConfig);
-                const db = firebase.database();
-                
-                // Mesajları dinle ve ekrana bas
-                db.ref("mesajlar").on("child_added", function(snapshot) {
-                    let data = snapshot.val();
-                    let chatBox = document.getElementById("chat-box");
-                    chatBox.innerHTML += `<div class='message'><span class='meta'>Anonim Biri:</span><br>${data.text}</div>`;
-                    chatBox.scrollTop = chatBox.scrollHeight;
-                });
-            } else {
-                document.getElementById("chat-box").innerHTML += "<div class='message'><span class='meta' style='color:red;'>Uyarı:</span><br>Firebase ayarlarını yapmadığın için sesini senden başka kimse duyamaz brom... 💀</div>";
-            }
+            // Sistemi başlatıyoruz
+            firebase.initializeApp(firebaseConfig);
+            const db = firebase.database();
+            
+            // Mesajları dinle ve ekrana bas
+            db.ref("mesajlar").on("child_added", function(snapshot) {
+                let data = snapshot.val();
+                let chatBox = document.getElementById("chat-box");
+                chatBox.innerHTML += `<div class='message'><span class='meta'>Anonim Biri:</span><br>${data.text}</div>`;
+                chatBox.scrollTop = chatBox.scrollHeight;
+            });
         } catch(e) {
             console.error("Yine bir şeyler ters gitti...", e);
+            document.getElementById("chat-box").innerHTML += "<div class='message'><span class='meta' style='color:red;'>Uyarı:</span><br>Sistem çöktü brom... Hayat gibi. 💀</div>";
         }
 
         function sendMessage() {
@@ -120,14 +117,7 @@
             if(text.trim() === "") return;
             
             try {
-                if (firebaseConfig.apiKey !== "BURAYI_DOLDURACAKSIN") {
-                    firebase.database().ref("mesajlar").push({ text: text });
-                } else {
-                    // Veritabanı yoksa sadece kendi ekranına sahte mesaj bas 🤦‍♂️
-                    let chatBox = document.getElementById("chat-box");
-                    chatBox.innerHTML += `<div class='message'><span class='meta'>Sen (Yalnız):</span><br>${text}</div>`;
-                    chatBox.scrollTop = chatBox.scrollHeight;
-                }
+                firebase.database().ref("mesajlar").push({ text: text });
             } catch(e) {
                 alert("Hayaller Paris, gerçekler veritabanı bağlantı hatası...");
             }
