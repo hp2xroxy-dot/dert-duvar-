@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Karanlık Dert Odası - Admin Paneli</title>
+    <title>Dert Duvarı - Admin Paneli</title>
     <style>
         body { 
             background-color: #121212; 
@@ -38,7 +38,6 @@
             font-size: 0.9em; 
             font-weight: bold;
         }
-        /* Admin için RGB animasyonu */
         @keyframes rgbGlow {
             0% { color: #ff0000; }
             33% { color: #00ff00; }
@@ -48,7 +47,6 @@
         .admin-name {
             animation: rgbGlow 3s infinite;
             font-weight: bold;
-            text-shadow: 0 0 5px rgba(255,255,255,0.3);
         }
         .input-area {
             width: 90%;
@@ -92,9 +90,9 @@
     </style>
 </head>
 <body>
-    <h2>🚬 Dert Duvarı (Admin Modu Aktif)</h2>
+    <h2>🚬 Dert Duvarı</h2>
     <div id="chat-box">
-        <div class="message"><span class="meta" style="color: #888;">Sistem:</span><br>Hoş geldin... Kurallar belli, patron sensin.</div>
+        <div class="message"><span class="meta" style="color: #888;">Sistem:</span><br>Sistem sıfırlandı, tertemiz kuruldu. Bekliyoruz...</div>
     </div>
     
     <div class="input-area">
@@ -117,35 +115,43 @@
             appId: "1:1096717129709:web:3abae1c278a46a85e939e4"
         };
 
+        // Benzersiz kullanıcı ID'si oluştur (Susturma işlemleri için şart)
+        let myId = localStorage.getItem("dert_user_id");
+        if(!myId) {
+            myId = 'user_' + Math.random().toString(36).substring(2, 9);
+            localStorage.setItem("dert_user_id", myId);
+        }
+
         let kullaniciAdi = "Anonim Biri";
         let isAdmin = false;
-        let userColor = "#" + Math.floor(Math.random()*16777215).toString(16); // Rastgele renk
+        // Her kullanıcıya rastgele bir renk veriyoruz (Admin hariç)
+        let userColor = '#' + Math.floor(Math.random()*16777215).toString(16);
 
         try {
             firebase.initializeApp(firebaseConfig);
             const db = firebase.database();
             
+            // Site açılır açılmaz isim soralım
             setTimeout(() => {
                 let girilenIsim = prompt("Dert duvarına hangi isimle yazacaksın brom?", "");
                 if (girilenIsim && girilenIsim.trim() !== "") {
                     let temizIsim = girilenIsim.trim();
-                    // Eğer "alfred" (büyük/küçük harf fark etmez) girerse direkt Admin yapıyoruz
                     if (temizIsim.toLowerCase() === "alfred") {
                         kullaniciAdi = "Admin";
                         isAdmin = true;
-                        alert("Kral merhabası! Admin yetkileri yüklendi, RGB mod aktif 👑");
+                        alert("Kral merhabası! Admin yetkileri aktif 👑");
                     } else {
                         kullaniciAdi = temizIsim;
                     }
                 }
             }, 300);
 
-            // Susturulanları kontrol etmek için ban listesini dinleyebiliriz veya mesaj engeli koyabiliriz
+            // Susturulanları dinle
             db.ref("susturulanlar").on("value", function(snapshot) {
                 window.mutedUsers = snapshot.val() || {};
             });
 
-            // Mesajları dinle
+            // Mesajları dinle ve ekrana yaz
             db.ref("mesajlar").on("child_added", function(snapshot) {
                 let key = snapshot.key;
                 let data = snapshot.val();
@@ -163,7 +169,7 @@
                 }
 
                 let adminButtons = "";
-                // Eğer giren kişi adminse ve mesajı atan admin değilse, sustur/kaldır butonu göster
+                // Eğer sen adminse ve mesaj atan başka biriyse sustur butonu koy
                 if (isAdmin && gonderen !== "Admin" && senderId) {
                     let isMuted = window.mutedUsers && window.mutedUsers[senderId];
                     if (isMuted) {
@@ -181,15 +187,8 @@
             console.error("Hata:", e);
         }
 
-        // Benzersiz bir tarayıcı kimliği oluşturalım ki banlarken kullanalım
-        let myId = localStorage.getItem("dert_user_id");
-        if(!myId) {
-            myId = 'user_' + Math.random().toString(36.substring(2, 9));
-            localStorage.setItem("dert_user_id", myId);
-        }
-
         function sendMessage() {
-            // Susturuldu mu kontrol et
+            // Susturulmuş mu kontrol et
             if (window.mutedUsers && window.mutedUsers[myId]) {
                 alert("Boss, admin tarafından susturuldun! Konuşamazsın 🤐");
                 return;
@@ -207,12 +206,11 @@
                     senderId: myId
                 });
             } catch(e) {
-                alert("Mesaj gitmedi brom...");
+                alert("Mesaj gönderilemedi...");
             }
             input.value = "";
         }
 
-        // Admin Yetkileri: Sustur ve Aç
         function muteUser(targetId, targetName) {
             if(!isAdmin) return;
             firebase.database().ref("susturulanlar/" + targetId).set(true);
@@ -222,7 +220,7 @@
         function unmuteUser(targetId) {
             if(!isAdmin) return;
             firebase.database().ref("susturulanlar/" + targetId).remove();
-            alert("Susturma kaldırıldı ses veriliyor 🔊");
+            alert("Susturma kaldırıldı 🔊");
         }
     </script>
 </body>
