@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Karanlık Dert Odası</title>
+    <title>Karanlık Dert Odası - Admin Paneli</title>
     <style>
         body { 
             background-color: #121212; 
@@ -35,9 +35,20 @@
             word-wrap: break-word;
         }
         .meta { 
-            font-size: 0.8em; 
-            color: #888; 
-            font-style: italic;
+            font-size: 0.9em; 
+            font-weight: bold;
+        }
+        /* Admin için RGB animasyonu */
+        @keyframes rgbGlow {
+            0% { color: #ff0000; }
+            33% { color: #00ff00; }
+            66% { color: #0000ff; }
+            100% { color: #ff0000; }
+        }
+        .admin-name {
+            animation: rgbGlow 3s infinite;
+            font-weight: bold;
+            text-shadow: 0 0 5px rgba(255,255,255,0.3);
         }
         .input-area {
             width: 90%;
@@ -65,12 +76,25 @@
         button:hover { 
             background: #666; 
         }
+        .admin-controls {
+            margin-top: 5px;
+            font-size: 0.75em;
+        }
+        .admin-controls button {
+            padding: 2px 6px;
+            font-size: 0.8em;
+            background: #552222;
+            margin-left: 5px;
+        }
+        .admin-controls button.unmute {
+            background: #225522;
+        }
     </style>
 </head>
 <body>
-    <h2>🚬 Dert Duvarı</h2>
+    <h2>🚬 Dert Duvarı (Admin Modu Aktif)</h2>
     <div id="chat-box">
-        <div class="message"><span class="meta">Sistem:</span><br>Hoş geldin... Her şeyin anlamsız olduğu bu boşluğa sen de bir şeyler yaz.</div>
+        <div class="message"><span class="meta" style="color: #888;">Sistem:</span><br>Hoş geldin... Kurallar belli, patron sensin.</div>
     </div>
     
     <div class="input-area">
@@ -83,7 +107,6 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
     <script>
-        // O canımız ciğerimiz şifrelerimiz (Sakın buralara dokunma!)
         const firebaseConfig = {
             apiKey: "AIzaSyBlxF9qsGsJXlfGcnnzQw3TV8BTPSINyGA",
             authDomain: "dert-duvari-9462d.firebaseapp.com",
@@ -94,52 +117,112 @@
             appId: "1:1096717129709:web:3abae1c278a46a85e939e4"
         };
 
-        let kullaniciAdi = "Anonim Biri"; // Eğer isim girmezlerse bu kalacak
+        let kullaniciAdi = "Anonim Biri";
+        let isAdmin = false;
+        let userColor = "#" + Math.floor(Math.random()*16777215).toString(16); // Rastgele renk
 
         try {
-            // Sistemi başlatıyoruz
             firebase.initializeApp(firebaseConfig);
             const db = firebase.database();
             
-            // Site açıldığında isim sormak için küçük bir gecikme ekliyoruz
             setTimeout(() => {
                 let girilenIsim = prompt("Dert duvarına hangi isimle yazacaksın brom?", "");
                 if (girilenIsim && girilenIsim.trim() !== "") {
-                    kullaniciAdi = girilenIsim.trim();
+                    let temizIsim = girilenIsim.trim();
+                    // Eğer "alfred" (büyük/küçük harf fark etmez) girerse direkt Admin yapıyoruz
+                    if (temizIsim.toLowerCase() === "alfred") {
+                        kullaniciAdi = "Admin";
+                        isAdmin = true;
+                        alert("Kral merhabası! Admin yetkileri yüklendi, RGB mod aktif 👑");
+                    } else {
+                        kullaniciAdi = temizIsim;
+                    }
                 }
             }, 300);
 
-            // Mesajları dinle ve ekrana bas
+            // Susturulanları kontrol etmek için ban listesini dinleyebiliriz veya mesaj engeli koyabiliriz
+            db.ref("susturulanlar").on("value", function(snapshot) {
+                window.mutedUsers = snapshot.val() || {};
+            });
+
+            // Mesajları dinle
             db.ref("mesajlar").on("child_added", function(snapshot) {
+                let key = snapshot.key;
                 let data = snapshot.val();
-                
-                // Eskiden atılan mesajlarda isim verisi yoksa çökelmesin diye kontrol
                 let gonderen = data.isim ? data.isim : "Anonim Biri";
+                let renk = data.renk ? data.renk : "#888";
+                let senderId = data.senderId || "";
 
                 let chatBox = document.getElementById("chat-box");
-                chatBox.innerHTML += `<div class='message'><span class='meta'>${gonderen}:</span><br>${data.text}</div>`;
+                
+                let nameHtml = "";
+                if (gonderen === "Admin") {
+                    nameHtml = `<span class="meta admin-name">Admin</span>`;
+                } else {
+                    nameHtml = `<span class="meta" style="color: ${renk};">${gonderen}</span>`;
+                }
+
+                let adminButtons = "";
+                // Eğer giren kişi adminse ve mesajı atan admin değilse, sustur/kaldır butonu göster
+                if (isAdmin && gonderen !== "Admin" && senderId) {
+                    let isMuted = window.mutedUsers && window.mutedUsers[senderId];
+                    if (isMuted) {
+                        adminButtons = `<span class="admin-controls"><button class="unmute" onclick="unmuteUser('${senderId}')">Susturmayı Kaldır</button></span>`;
+                    } else {
+                        adminButtons = `<span class="admin-controls"><button onclick="muteUser('${senderId}', '${gonderen}')">Sustur 🔇</button></span>`;
+                    }
+                }
+
+                chatBox.innerHTML += `<div class='message' id='msg-${key}'>${nameHtml} ${adminButtons}<br>${data.text}</div>`;
                 chatBox.scrollTop = chatBox.scrollHeight;
             });
+
         } catch(e) {
-            console.error("Yine bir şeyler ters gitti...", e);
-            document.getElementById("chat-box").innerHTML += "<div class='message'><span class='meta' style='color:red;'>Uyarı:</span><br>Sistem çöktü brom... Hayat gibi. 💀</div>";
+            console.error("Hata:", e);
+        }
+
+        // Benzersiz bir tarayıcı kimliği oluşturalım ki banlarken kullanalım
+        let myId = localStorage.getItem("dert_user_id");
+        if(!myId) {
+            myId = 'user_' + Math.random().toString(36.substring(2, 9));
+            localStorage.setItem("dert_user_id", myId);
         }
 
         function sendMessage() {
+            // Susturuldu mu kontrol et
+            if (window.mutedUsers && window.mutedUsers[myId]) {
+                alert("Boss, admin tarafından susturuldun! Konuşamazsın 🤐");
+                return;
+            }
+
             let input = document.getElementById("msg-input");
             let text = input.value;
             if(text.trim() === "") return;
             
             try {
-                // Artık sadece mesajı değil, yazanın ismini de veritabanına atıyoruz
                 firebase.database().ref("mesajlar").push({ 
                     isim: kullaniciAdi,
-                    text: text 
+                    text: text,
+                    renk: userColor,
+                    senderId: myId
                 });
             } catch(e) {
-                alert("Hayaller Paris, gerçekler veritabanı bağlantı hatası...");
+                alert("Mesaj gitmedi brom...");
             }
             input.value = "";
+        }
+
+        // Admin Yetkileri: Sustur ve Aç
+        function muteUser(targetId, targetName) {
+            if(!isAdmin) return;
+            firebase.database().ref("susturulanlar/" + targetId).set(true);
+            alert(targetName + " susturuldu 🔇");
+        }
+
+        function unmuteUser(targetId) {
+            if(!isAdmin) return;
+            firebase.database().ref("susturulanlar/" + targetId).remove();
+            alert("Susturma kaldırıldı ses veriliyor 🔊");
         }
     </script>
 </body>
